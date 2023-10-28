@@ -63,6 +63,93 @@ class BTree:
         else:
             return self.search(key, x.children[i])
 
+    def remove(self, key):
+        if not self.root.keys:
+            return
+        if key in self.root.keys:
+            if len(self.root.keys) == 1:
+                if self.root.children:
+                    self.root = self.root.children[0]
+                else:
+                    self.root.keys.remove(key)
+            else:
+                self.remove_key_from_node(self.root, key)
+        else:
+            self.remove_key_from_node(self.root, key)
+
+    def remove_key_from_node(self, node, key):
+        i = 0
+        while i < len(node.keys) and key > node.keys[i]:
+            i += 1
+        if i < len(node.keys) and key == node.keys[i]:
+            if node.is_leaf:
+                node.keys.remove(key)
+            else:
+                key_pred = self.get_predecessor(node, i)
+                if len(node.children[i].keys) >= self.t:
+                    node.keys[i] = key_pred
+                    self.remove_key_from_node(node.children[i], key_pred)
+                else:
+                    key_succ = self.get_successor(node, i)
+                    node.keys[i] = key_succ
+                    self.remove_key_from_node(node.children[i + 1], key_succ)
+        else:
+            if node.is_leaf:
+                return
+            if len(node.children[i].keys) < self.t:
+                self.fix_child(node, i)
+            self.remove_key_from_node(node.children[i], key)
+
+    def get_predecessor(self, node, idx):
+        current = node.children[idx]
+        while not current.is_leaf:
+            current = current.children[-1]
+        return current.keys[-1]
+
+    def get_successor(self, node, idx):
+        current = node.children[idx + 1]
+        while not current:
+            current = current.children[0]
+        return current.keys[0]
+
+    def fix_child(self, node, idx):
+        if idx > 0 and len(node.children[idx - 1].keys) >= self.t:
+            self.borrow_from_left_sibling(node, idx)
+        elif idx < len(node.children) - 1 and len(node.children[idx + 1].keys) >= self.t:
+            self.borrow_from_right_sibling(node, idx)
+        else:
+            if idx < len(node.children):
+                self.merge_children(node, idx)
+            else:
+                self.merge_children(node, idx - 1)
+
+    def borrow_from_left_sibling(self, node, idx):
+        child = node.children[idx]
+        left_sibling = node.children[idx - 1]
+
+        child.keys.insert(0, node.keys[idx - 1])
+        node.keys[idx - 1] = left_sibling.keys.pop()
+        if not left_sibling.is_leaf:
+            child.children.insert(0, left_sibling.children.pop())
+
+    def borrow_from_right_sibling(self, node, idx):
+        child = node.children[idx]
+        right_sibling = node.children[idx + 1]
+
+        child.keys.append(node.keys[idx])
+        node.keys[idx] = right_sibling.keys.pop(0)
+        if not right_sibling.is_leaf:
+            child.children.append(right_sibling.children.pop(0))
+
+    def merge_children(self, node, idx):
+        left_child = node.children[idx]
+        right_child = node.children[idx + 1]
+
+        left_child.keys.append(node.keys.pop(idx))
+        left_child.keys.extend(right_child.keys)
+        if not right_child.is_leaf:
+            left_child.children.extend(right_child.children)
+
     def display(self, x=None, level=0):
         if x is None:
             x = self.root
@@ -71,8 +158,6 @@ class BTree:
         if not x.is_leaf:
             for child in x.children:
                 self.display(child, level)
-
-## falta funcao de remocao 
 
 # Exemplo de uso:
 b_tree = BTree(3)  # Árvore B de ordem 3
@@ -83,4 +168,8 @@ for key in keys:
 
 b_tree.display()  # Exibir a árvore B
 print(b_tree.search(5))  # True
-print(b_tree.search(11))  # False
+print(b_tree.search(8))  # False
+
+# Para remover um valor, você pode usar:
+b_tree.remove(24)
+b_tree.display()  # Exibir a árvore B após a remoção do valor 7
