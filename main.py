@@ -4,7 +4,6 @@ class BTreeNode:  # Arvore B
         self.keys = []
         self.children = []
 
-
 class BTree:
     def __init__(self, t):
         self.root = BTreeNode()
