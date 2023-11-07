@@ -72,7 +72,7 @@ class ArvoreB:
 
     def remover(self, chave):
         if not self.raiz.chaves:
-            return
+            return print ("Árvore vazia")
         self.raiz = self.remover_recursivo(self.raiz, chave)
         if not self.raiz.chaves:
             if self.raiz.filhos:
