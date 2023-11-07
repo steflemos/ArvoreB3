@@ -1,18 +1,19 @@
 class NoArvoreB:
-    def __init__(self, eh_folha=True, t=2):
+    def __init__(self, eh_folha=True):
         self.eh_folha = eh_folha
         self.chaves = []
         self.filhos = []
 
+
 class ArvoreB:
     def __init__(self, t):
-        self.raiz = NoArvoreB(eh_folha=True, t=t)
+        self.raiz = NoArvoreB(eh_folha=True)
         self.t = t
 
     def inserir(self, chave):
         raiz = self.raiz
         if len(raiz.chaves) == (2 * self.t - 1):
-            novo_no = NoArvoreB(eh_folha=False, t=self.t)
+            novo_no = NoArvoreB(eh_folha=False)
             novo_no.filhos.append(raiz)
             self.dividir_filho(novo_no, 0)
             self.raiz = novo_no
@@ -37,7 +38,7 @@ class ArvoreB:
     def dividir_filho(self, x, i):
         t = self.t
         y = x.filhos[i]
-        z = NoArvoreB(eh_folha=y.eh_folha, t=self.t)
+        z = NoArvoreB(eh_folha=y.eh_folha)
         x.filhos.insert(i + 1, z)
         x.chaves.insert(i, y.chaves[t - 1])
         z.chaves = y.chaves[t:]
@@ -46,37 +47,42 @@ class ArvoreB:
             z.filhos = y.filhos[t:]
             y.filhos = y.filhos[:t]
 
-    def buscar(self, chave, x=None):
+    def buscar(self, chave, x=None, nivel=0):
         if x is None:
             x = self.raiz
         i = 0
+        print(
+            f"Nível {nivel}: Procurando por chave {chave} em {', '.join(map(str, x.chaves))}")
+
         while i < len(x.chaves) and chave > x.chaves[i]:
             i += 1
+
         if i < len(x.chaves) and chave == x.chaves[i]:
+            print(
+                f"Nível {nivel}: Chave {chave} encontrada em {', '.join(map(str, x.chaves))}")
             return True
         elif x.eh_folha:
+            print(
+                f"Nível {nivel}: Chave {chave} não encontrada em {', '.join(map(str, x.chaves))}")
             return False
         else:
-            return self.buscar(chave, x.filhos[i])
+            print(
+                f"Nível {nivel}: Descendo para filho {i} de {', '.join(map(str, x.chaves))}")
+            return self.buscar(chave, x.filhos[i], nivel + 1)
 
     def remover(self, chave):
         if not self.raiz.chaves:
             return
-        if chave in self.raiz.chaves:
-            if len(self.raiz.chaves) == 1:
-                if self.raiz.filhos:
-                    self.raiz = self.raiz.filhos[0]
-                else:
-                    self.raiz.chaves.remove(chave)
-            else:
-                self.remover_chave_do_no(self.raiz, chave)
-        else:
-            self.remover_chave_do_no(self.raiz, chave)
+        self.raiz = self.remover_recursivo(self.raiz, chave)
+        if not self.raiz.chaves:
+            if self.raiz.filhos:
+                self.raiz = self.raiz.filhos[0]
 
-    def remover_chave_do_no(self, no, chave):
+    def remover_recursivo(self, no, chave):
         i = 0
         while i < len(no.chaves) and chave > no.chaves[i]:
             i += 1
+
         if i < len(no.chaves) and chave == no.chaves[i]:
             if no.eh_folha:
                 no.chaves.pop(i)
@@ -84,31 +90,34 @@ class ArvoreB:
                 if len(no.filhos[i].chaves) >= self.t:
                     predecessor = self.obter_predecessor(no, i)
                     no.chaves[i] = predecessor
-                    self.remover_chave_do_no(no.filhos[i], predecessor)
-                elif len(no.filhos[i + 1].chaves) >= self.t:
-                    sucessor = self.obter_sucessor(no, i)
-                    no.chaves[i] = sucessor
-                    self.remover_chave_do_no(no.filhos[i + 1], sucessor)
+                    no.filhos[i] = self.remover_recursivo(
+                        no.filhos[i], predecessor)
                 else:
-                    self.juntar_filhos(no, i)
-                    if len(no.chaves) == 0:
-                        self.raiz = no.filhos[0]
-                    self.remover_chave_do_no(no.filhos[i], chave)
+                    if len(no.filhos[i + 1].chaves) >= self.t:
+                        sucessor = self.obter_sucessor(no, i)
+                        no.chaves[i] = sucessor
+                        no.filhos[i +
+                                  1] = self.remover_recursivo(no.filhos[i + 1], sucessor)
+                    else:
+                        self.juntar_filhos(no, i)
+                        no.filhos[i] = self.remover_recursivo(
+                            no.filhos[i], chave)
         else:
             if no.eh_folha:
-                return
+                return no
             if len(no.filhos[i].chaves) < self.t:
                 if i > 0 and len(no.filhos[i - 1].chaves) >= self.t:
-                    self.pegar_do_irmao_esquerdo(no, i)
+                    no.filhos[i] = self.pegar_do_irmao_esquerdo(no, i)
                 elif i < len(no.filhos) - 1 and len(no.filhos[i + 1].chaves) >= self.t:
-                    self.pegar_do_irmao_direito(no, i)
+                    no.filhos[i] = self.pegar_do_irmao_direito(no, i)
                 else:
                     self.juntar_filhos(no, i)
                     if len(no.chaves) == 0:
-                        self.raiz = no.filhos[0]
-                    if i == len(no.chaves):
-                        i -= 1
-                    self.remover_chave_do_no(no.filhos[i], chave)
+                        return no.filhos[0]
+                return self.remover_recursivo(no.filhos[i], chave)
+            else:
+                no.filhos[i] = self.remover_recursivo(no.filhos[i], chave)
+        return no
 
     def obter_predecessor(self, no, idx):
         atual = no.filhos[idx]
@@ -168,16 +177,23 @@ class ArvoreB:
                     self.mostrar(x.filhos[i], nivel)
 
 
-
-arvore_b = ArvoreB(3) #Arvore de ordem 2, quantidade maxima de filhos = 3
-chaves = [1, 2, 3, 7, 9, 10, 14, 15, 16, 17, 22, 23, 24, 28, 31, 32, 33, 34, 40, 41, 42]
+arvore_b = ArvoreB(3)  # Arvore de ordem 2, quantidade maxima de chaves = 4 (na inserção da quarta chave ela divide o nó)
+chaves = [1, 2, 3, 7, 9, 10, 14, 15, 16, 17,
+          22, 23, 24, 28, 31, 32, 33, 34, 40, 41, 42]
 
 for chave in chaves:
     arvore_b.inserir(chave)
 
+print("\nArvore B: ")
 arvore_b.mostrar()
+
+print("\nUsando a funcao buscar para encontrar o numero 7: ")
 print(arvore_b.buscar(7))
+
+print("\nUsando a funcao buscar para encontrar o numero 25: ")
 print(arvore_b.buscar(25))
 
+
+print("\nUsando a funcao remover: (remove o numero 24)")
 arvore_b.remover(24)
-arvore_b.mostrar()
+arvore_b.mostrar(arvore_b.raiz)
